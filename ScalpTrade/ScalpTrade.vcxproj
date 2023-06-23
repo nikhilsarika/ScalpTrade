@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ConcurrentQueue.cpp" />
     <ClCompile Include="GenerateTestData.cpp" />
     <ClCompile Include="MessageHeader.cpp" />
     <ClCompile Include="Order.cpp" />
@@ -137,6 +138,7 @@
     <ClCompile Include="Trade.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="MessageHeader.h" />
     <ClInclude Include="Order.h" />
     <ClInclude Include="Quote.h" />

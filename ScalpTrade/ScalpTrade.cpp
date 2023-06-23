@@ -5,7 +5,10 @@
 #include "Quote.h"
 #include "Trade.h"
 #include "Order.h"
-
+#include "ConcurrentQueue.h"
+#include <chrono>
+#include <algorithm>
+#include <thread>
 
 #include <array>
 #include <memory>
@@ -15,7 +18,17 @@
 using std::string;
 using std::atoi;
 using std::cout;
+using std::max;
+using std::thread;
 using byte = unsigned char;
+
+
+std::atomic<int> vwap = 0;
+std::atomic<bool> triggerVwapUpdate = true;
+std::atomic<bool> vwapFlag = true;
+Quote* newQuote = nullptr;
+Trade* newTrade = nullptr;
+ConcurrentQueue<Trade> *tradeQueue = new ConcurrentQueue<Trade>();
 template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object);
 int main(int argc, char* argv[]) {
 	
@@ -68,12 +81,14 @@ int main(int argc, char* argv[]) {
 	cout << askQuantity << "\n";
 	cout << std::dec << askPrice << "\n";
 
+
+
 	return 0;
 }
 
 
 template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object)
-{
+{ 
 	std::array< byte, sizeof(T) > bytes;
 
 	const byte* begin = reinterpret_cast<const byte*>(std::addressof(object));
@@ -81,4 +96,55 @@ template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object)
 	std::copy(begin, end, std::begin(bytes));
 
 	return bytes;
+}
+
+
+void processMessage(byte* input, string const& orderSide, int const& vwapWindow, int const& maxQuantity) {
+
+	MessageHeader* messageHeader = reinterpret_cast<MessageHeader*>(*input);
+
+	if (vwapFlag && messageHeader->type == 1) {
+		newQuote = reinterpret_cast<Quote*>(&input);
+		if (orderSide == "B" && newQuote->bidPrice < vwap) {
+			placeNewOrder(newQuote->symbol, 'B', max(maxQuantity, static_cast<int>(newQuote->bidQuantity)), newQuote->bidPrice);
+		}
+		else if (orderSide == "S" && newQuote->askPrice > vwap) {
+			placeNewOrder(newQuote->symbol, 'S', max(maxQuantity, static_cast<int>(newQuote->askQuantity)), newQuote->askPrice);
+		}
+	}
+	else if (messageHeader->type == 2) {
+		newTrade = reinterpret_cast<Trade*>(&input);
+		tradeQueue->push(*newTrade);
+		if (triggerVwapUpdate) {
+			//vwap is updated in the background as the trade messages are received. 
+			thread vwapThread(updateVwap, vwapWindow);
+			triggerVwapUpdate = false;
+		}
+	}
+}
+
+
+void updateVwap(int const& vwapWindow) {
+	Trade trade = tradeQueue->pop();
+	int vwap_numerator = vwap_numerator + (trade.price * trade.quantity);
+	int vwap_denominator = vwap_denominator + trade.quantity;
+	auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(vwapWindow);
+	while (std::chrono::system_clock::now() < endofVWapWindow) {
+		if (!tradeQueue->isEmpty()) {
+			trade = tradeQueue->pop();
+			vwap_numerator = vwap_numerator + (trade.price * trade.quantity);
+			vwap_denominator = vwap_denominator + trade.quantity;
+		}
+	}
+	vwap = vwap_numerator / vwap_numerator;
+	vwapFlag = true;
+	triggerVwapUpdate = true;
+}
+
+
+void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price) {
+	uint64_t timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	Order* newOrder = new Order(symbol, timestamp, side, quantity, price);
+	auto bytes = to_bytes(*newOrder);
+	//add code to send new order. 
 }
