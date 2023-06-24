@@ -127,7 +127,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+<<<<<<< HEAD
     <ClCompile Include="ConcurrentQueue.cpp" />
+=======
+>>>>>>> 5e92c35f371c88d5ebc8852260a6c1437cca042e
     <ClCompile Include="GenerateTestData.cpp" />
     <ClCompile Include="MessageHeader.cpp" />
     <ClCompile Include="Order.cpp" />
