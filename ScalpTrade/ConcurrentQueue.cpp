@@ -1,4 +1,5 @@
 #include "ConcurrentQueue.h"
+#include "Trade.h"
 
 template <typename T>
 ConcurrentQueue<T>::~ConcurrentQueue(){}
@@ -43,3 +44,4 @@ bool ConcurrentQueue<T>::isEmpty()
 	return m_queue.empty();
 }
 
+template class ConcurrentQueue<Trade>;
