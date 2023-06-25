@@ -127,10 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-<<<<<<< HEAD
     <ClCompile Include="ConcurrentQueue.cpp" />
-=======
->>>>>>> 5e92c35f371c88d5ebc8852260a6c1437cca042e
     <ClCompile Include="GenerateTestData.cpp" />
     <ClCompile Include="MessageHeader.cpp" />
     <ClCompile Include="Order.cpp" />
@@ -146,6 +143,9 @@
     <ClInclude Include="Order.h" />
     <ClInclude Include="Quote.h" />
     <ClInclude Include="Trade.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="makefile" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
