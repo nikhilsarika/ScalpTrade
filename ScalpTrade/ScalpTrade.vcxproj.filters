@@ -39,6 +39,9 @@
     <ClCompile Include="GenerateTestData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConcurrentQueue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MessageHeader.h">
@@ -53,5 +56,11 @@
     <ClInclude Include="Order.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ConcurrentQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="makefile" />
   </ItemGroup>
 </Project>

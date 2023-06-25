@@ -1,4 +1,3 @@
-// C++ implementation of the above approach
 #include "ConcurrentQueue.h"
 
 template <typename T>
