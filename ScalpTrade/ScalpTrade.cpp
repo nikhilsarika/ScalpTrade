@@ -23,13 +23,16 @@ using std::thread;
 using byte = unsigned char;
 
 
-std::atomic<int> vwap = 0;
-std::atomic<bool> triggerVwapUpdate = true;
-std::atomic<bool> vwapFlag = true;
+std::atomic<int> vwap(0);
+std::atomic<bool> triggerVwapUpdate(true);
+std::atomic<bool> vwapFlag(true);
 Quote* newQuote = nullptr;
 Trade* newTrade = nullptr;
 ConcurrentQueue<Trade> *tradeQueue = new ConcurrentQueue<Trade>();
 template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object);
+void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price);
+void updateVwap(int const& vwapWindow);
+
 int main(int argc, char* argv[]) {
 	
 
