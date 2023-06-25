@@ -100,11 +100,12 @@ int main(int argc, char* argv[]) {
 	//Below quoteBytes and Tradebytes are sent by the socket
 	
 	while (true) {
-		cout << "Inside while" << vwap << '\n';
+		
 		//to_bytes(quote);
 		//processMessage(reinterpret_cast<byte*>(&trade), orderSide, vwapWindow, maxOrderSize);
 		//processMessage(reinterpret_cast<byte*>(&quote), orderSide, vwapWindow, maxOrderSize);
 		if (vwapFlag) {
+			//cout << "Inside Quote" << vwap << '\n';
 			processQuote(quote, orderSide, maxOrderSize);
 		}
 		
@@ -160,11 +161,15 @@ template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object)
 
 void processQuote(Quote* newQuote, string const& orderSide, int const& maxQuantity) {
 	if (orderSide == "B" && static_cast<int>(newQuote->bidPrice) < vwap) {
+		cout << "reached processMessage in Buy" << vwap << '\n';
 		placeNewOrder(newQuote->symbol, 'B', max(maxQuantity, static_cast<int>(newQuote->bidQuantity)), newQuote->bidPrice);
 	}
 	else if (orderSide == "S" && static_cast<int>(newQuote->askPrice) > vwap) {
 		cout << "reached processMessage in sell" << vwap << '\n';
 		placeNewOrder(newQuote->symbol, 'S', max(maxQuantity, static_cast<int>(newQuote->askQuantity)), newQuote->askPrice);
+	}
+	else {
+		cout << "reached Else block in Process QUote" << vwap << '\n';
 	}
 }
 
@@ -174,6 +179,7 @@ void processTrade(Trade* newTrade,int const& vwapWindow) {
 	if (triggerVwapUpdate) {
 		//vwap is updated in the background as the trade messages are received. 
 		thread vwapThread(updateVwap, vwapWindow);
+		vwapThread.detach();
 		triggerVwapUpdate = false;
 	}
 }
