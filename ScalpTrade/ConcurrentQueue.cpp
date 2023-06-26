@@ -1,5 +1,7 @@
 #include "ConcurrentQueue.h"
 #include "Trade.h"
+#include "MessageHeader.h"
+#include "Order.h"
 
 template <typename T>
 ConcurrentQueue<T>::~ConcurrentQueue(){}
@@ -45,3 +47,5 @@ bool ConcurrentQueue<T>::isEmpty()
 }
 
 template class ConcurrentQueue<Trade>;
+template class ConcurrentQueue<MessageHeader*>;
+template class ConcurrentQueue<Order>;

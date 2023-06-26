@@ -42,6 +42,9 @@
     <ClCompile Include="ConcurrentQueue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Backup-Scalp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MessageHeader.h">
@@ -62,5 +65,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="makefile" />
+    <None Include="Readme.MD">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

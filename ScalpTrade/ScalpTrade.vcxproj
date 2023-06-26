@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Backup-Scalp.cpp" />
     <ClCompile Include="ConcurrentQueue.cpp" />
     <ClCompile Include="GenerateTestData.cpp" />
     <ClCompile Include="MessageHeader.cpp" />
@@ -146,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="makefile" />
+    <None Include="Readme.MD" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
