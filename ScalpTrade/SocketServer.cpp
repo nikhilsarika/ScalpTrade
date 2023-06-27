@@ -1,22 +1,24 @@
 #include "SocketServer.h"
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "TestVariables.h"
 
 
-template <typename T>
-SocketServer<T>::SocketServer(std::string tcpIp, std::string tcpPort, ConcurrentQueue<char*> queue) : tcpIp(tcpIp), tcpPort(tcpPort), queue(queue)
+
+SocketServer::SocketServer(std::string tcpIp, std::string tcpPort) : tcpIp(tcpIp), tcpPort(tcpPort)
 {
     tcpConnectionAlive = 1;
-    buffer = { 0 };
+    opt =1;
 };
 
-template <typename T>
-SocketServer<T>::~SocketServer()
+
+SocketServer::~SocketServer()
 {
     // closing the connected socket
     close(new_socket);
@@ -24,27 +26,37 @@ SocketServer<T>::~SocketServer()
     shutdown(server_fd, SHUT_RDWR);
 };
 
-template <typename T>
-int SocketServer<T>::sendMessages() {
+
+int SocketServer::sendMessages() {
+
+    std::cout << "Begining of Send Messages: " << '\n';
     struct sockaddr_in address;
+    addrlen = sizeof(address);
 
     // Creating socket file descriptor
+    std::cout << "before Socket Filse Desrciptor Creation: " << '\n';
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
     // Forcefully attaching socket to the port 8080
+    std::cout << "before Forefullyt attaching port: " << '\n';
     if (setsockopt(server_fd, SOL_SOCKET,
-        SO_REUSEADDR | SO_REUSEPORT, &opt,
+        SO_REUSEADDR , &opt,
         sizeof(opt))) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
     }
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+    // address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+    // inet_pton(AF_INET, tcpIp.c_str(), &address.sin_addr.s_addr);
+    // address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(std::stoul(tcpPort));
 
+
+    std::cout << "before Binding: " << '\n';
     // Forcefully attaching socket to the port 8080
     if (bind(server_fd, (struct sockaddr*)&address,
         sizeof(address))
@@ -52,10 +64,12 @@ int SocketServer<T>::sendMessages() {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
+    std::cout << "before Listen: " << '\n';
     if (listen(server_fd, 3) < 0) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
+    std::cout << "before accept: " << '\n';
     if ((new_socket
         = accept(server_fd, (struct sockaddr*)&address,
             (socklen_t*)&addrlen))
@@ -64,12 +78,40 @@ int SocketServer<T>::sendMessages() {
         exit(EXIT_FAILURE);
     }
 
-
-    while (tcpConnectionAlive < 0) {
-        tcpConnectionAlive = send(new_socket, buffer, 1024, 0);
+    std::cout << "before ifinite while: " << '\n';
+    while (true) {
+        if(!testQueue->isEmpty()){
+            std::cout<< "Inside TCP Server Queue" << '\n';
+            strcpy(buffer, testQueue->pop());
+            tcpConnectionAlive = send(new_socket, buffer, 1024, 0);
+        }
     }
 
+// std::cout << "before ifinite while: " << '\n';
+// for ( ; ; ) {
+//     socklen_t clilen;
+//     int n;
+//     clilen = sizeof(address);
+//     new_socket = accept (server_fd, (struct sockaddr *) &address, &clilen);
+//     printf("%s\n","Received request...");
+
+//     while ( (n = recv(new_socket, buffer, 1024,0)) > 0)  {
+//     printf("%s","String received from and resent to the client:");
+//         if(!testQueue->isEmpty()){
+//             std::cout<< "Inside TCP Server Queue" << '\n';
+//             strcpy(buffer, testQueue->pop());
+//             tcpConnectionAlive = send(new_socket, buffer, 1024, 0);
+//         }
+//     }
+
+//     if (n < 0) {
+//     perror("Read error");
+//     exit(1);
+//     }
+//     close(new_socket);
+
+//  }   
     return 0;
 
-}
+};
 

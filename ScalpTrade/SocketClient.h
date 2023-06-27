@@ -1,21 +1,17 @@
 #pragma once
 #include <string>
-#include <cstdint>
-#include "ConcurrentQueue.h"
 
-template <typename T>
 class SocketClient
 {
 private:
 	std::string tcpIp;
 	std::string tcpPort;
-	ConcurrentQueue<char*> queue;
 	int status;
 	int client_fd;
 	int tcpConnectionAlive;
-	char buffer[1024];
+	char buffer[1024] = {0};
 public:
-	SocketClient(std::string tcpIp , std::string tcpPort, ConcurrentQueue<char*> queue);
+	SocketClient(std::string tcpIp , std::string tcpPort);
 	~SocketClient();
 	int startReceivingData();
 	int startSendingData();
