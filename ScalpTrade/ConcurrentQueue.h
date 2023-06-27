@@ -13,7 +13,7 @@ private:
 	std::condition_variable m_cond;
 
 public:
-	void push(T item);
+	void push(T& item);
 	T pop();
 	bool isEmpty();
 	ConcurrentQueue() = default; 

@@ -33,7 +33,7 @@ make
 * Assumed only two message types will be received in the
 * utillized a do while loop as the Vwap value needs to be caluated only if atlease on value is present. 
 * Quantity is assumed to be a non zero value. 
-
+* Return value from read() method in sockets is used to Check if Socket connection is alive.
 
 
 ## Known Issues

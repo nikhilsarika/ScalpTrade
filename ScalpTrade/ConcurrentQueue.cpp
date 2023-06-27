@@ -2,12 +2,15 @@
 #include "Trade.h"
 #include "MessageHeader.h"
 #include "Order.h"
+#include "Quote.h"
+
+using byte = unsigned char;
 
 template <typename T>
 ConcurrentQueue<T>::~ConcurrentQueue(){}
 
 template <typename T>
-void ConcurrentQueue<T>:: push(T item)
+void ConcurrentQueue<T>:: push(T& item)
 {
 
 		// Acquire lock
@@ -49,3 +52,4 @@ bool ConcurrentQueue<T>::isEmpty()
 template class ConcurrentQueue<Trade>;
 template class ConcurrentQueue<MessageHeader*>;
 template class ConcurrentQueue<Order>;
+template class ConcurrentQueue<char*>;

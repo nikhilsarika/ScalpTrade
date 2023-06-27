@@ -15,7 +15,6 @@
 #include <memory>
 #include <type_traits>
 #include <iomanip>
-
 using std::string;
 using std::atoi;
 using std::cout;
@@ -39,18 +38,15 @@ Trade* newTrade = nullptr;
 
 //Concurrent Queues defined to Consume Byte data from the Market Data TCP Streams.
 ConcurrentQueue<Trade> *tradeQueue = new ConcurrentQueue<Trade>();
-ConcurrentQueue<MessageHeader*>* messageQueue = new ConcurrentQueue<MessageHeader*>();
 
 //Concurrent Queue defined to Push Byte data to the Order TCP Stream.
 ConcurrentQueue<Order>* orderQueue = new ConcurrentQueue<Order>();
-
 
 //Methods Declared to process Quote and Trade Messages received from the Streams
 void processQuote(Quote* newQuote, string const& orderSide, int const& maxQuantity);
 void processTrade(Trade* newTrade, int const& vwapWindow);
 void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price);
 void updateVwap(int const& vwapWindow);
-template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object);
 
 //Driver Function to read Start the Application and Read Command Line Inputs
 int main(int argc, char* argv[]) {
@@ -68,12 +64,12 @@ int main(int argc, char* argv[]) {
 
 	//Test Data Generation to Stream to the 
 	MessageHeader* header = new MessageHeader(9, 1);
-	Quote* quote = new Quote(header, "IBM", 1580152659000000000ULL, 5, 13897, 9, 13898);
+	Quote* quote = new Quote(*header, "IBM", 1580152659000000000ULL, 5, 13897, 9, 13898);
 
 	MessageHeader* header1 = new MessageHeader(9, 2);
-	Trade* trade = new Trade(header1, "IBM", 1580152659000000000ULL, 100, 13900);
+	Trade* trade = new Trade(*header1, "IBM", 1580152659000000000ULL, 100, 13900);
 
-
+	ConcurrentQueue <char*> *byteQueue = new ConcurrentQueue < char*>();
 	//Implement Socket to receive Byte data;
 	//processMessage(input, orderSide, vwapWindow, maxQuantity);
 	//Below quoteBytes and Tradebytes are sent by the socket
@@ -81,24 +77,29 @@ int main(int argc, char* argv[]) {
 	bool tempFlag = true;
 	//while (std::chrono::system_clock::now() < endofVWapWindow) {
 	while (tempFlag) {
-		messageQueue->push(reinterpret_cast<MessageHeader*>(quote));
-		messageQueue->push(reinterpret_cast<MessageHeader*>(trade));
+
+		unsigned char* check = NULL;
+		char* quotePointer = reinterpret_cast<char*>(quote);
+		char* TradePointer = reinterpret_cast<char*>(trade);
+		byteQueue->push(quotePointer);
+		byteQueue->push(TradePointer);
 		tempFlag = false;
 	}
 	
 
 	//Messages are read from the messageQueue that contains the messages received from Sockets
-	while (!messageQueue->isEmpty()) {
+	while (!byteQueue->isEmpty()) {
 		
-		MessageHeader currentHeader = *messageQueue->pop();
-		cout<<  "current header length " << currentHeader.length << '\n';
+		char* currentByteStream = byteQueue->pop();
+		MessageHeader* currentHeader = reinterpret_cast<MessageHeader*>(currentByteStream);
+
 		//Messages are processed Based on the Message Header Type i.e. 1 for Quote, 2 for Trade and Exception for all other types
-		if (initialVwapCalculated && currentHeader.type == 1) {
-			newQuote = reinterpret_cast<Quote*>(&currentHeader);
+		if (initialVwapCalculated && static_cast<int>(currentHeader->type) == 1) {
+			newQuote = (Quote*)(&currentByteStream);
 			processQuote(quote, orderSide, maxOrderSize);
 		}
-		else if (currentHeader.type == 1){
-			newTrade = reinterpret_cast<Trade*>(&currentHeader);
+		else if (static_cast<int>(currentHeader->type) == 2){
+			newTrade = (Trade*)(&currentByteStream);
 			processTrade(trade, vwapWindow);
 		}
 		else {
@@ -110,18 +111,6 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-//Need to be removed/moved after sockets are implemented
-//Method defined to Create a byte array 
-template< typename T > std::array< byte, sizeof(T) >  to_bytes(const T& object)
-{
-	std::array< byte, sizeof(T) > bytes;
-
-	const byte* begin = reinterpret_cast<const byte*>(std::addressof(object));
-	const byte* end = begin + sizeof(T);
-	std::copy(begin, end, std::begin(bytes));
-
-	return bytes;
-}
 
 //Quote messages are processed based on the order side and Vwap Price
 void processQuote(Quote* newQuote, string const& orderSide, int const& maxQuantity) {

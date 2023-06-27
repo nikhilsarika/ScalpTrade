@@ -9,6 +9,7 @@ public:
 	uint8_t length;
 	uint8_t type;
 	MessageHeader(uint8_t length, uint8_t type);
+	MessageHeader() = default;
 	~MessageHeader();
 };
 

@@ -134,6 +134,7 @@
     <ClCompile Include="Order.cpp" />
     <ClCompile Include="Quote.cpp" />
     <ClCompile Include="ScalpTrade.cpp" />
+    <ClCompile Include="SocketClient.cpp" />
     <ClCompile Include="SocketServer.cpp" />
     <ClCompile Include="Test.cpp" />
     <ClCompile Include="Trade.cpp" />
@@ -143,6 +144,8 @@
     <ClInclude Include="MessageHeader.h" />
     <ClInclude Include="Order.h" />
     <ClInclude Include="Quote.h" />
+    <ClInclude Include="SocketClient.h" />
+    <ClInclude Include="SocketServer.h" />
     <ClInclude Include="Trade.h" />
   </ItemGroup>
   <ItemGroup>

@@ -7,12 +7,12 @@ class Trade
 private:
 
 public:
-	MessageHeader* header;
+	MessageHeader header;
 	std::string symbol;
 	uint64_t timestamp;
 	uint32_t quantity;
 	int32_t price;
 	Trade() = default;
-	Trade(MessageHeader* header, std::string symbol, uint64_t timestamp, uint32_t quantity, int32_t price);
+	Trade(MessageHeader header, std::string symbol, uint64_t timestamp, uint32_t quantity, int32_t price);
 	~Trade();
 };
