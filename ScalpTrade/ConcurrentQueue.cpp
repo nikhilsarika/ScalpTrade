@@ -1,8 +1,7 @@
 #include "ConcurrentQueue.h"
-#include "Trade.h"
+#include "NewTrade.h"
 #include "MessageHeader.h"
 #include "Order.h"
-#include "Quote.h"
 
 using byte = unsigned char;
 
@@ -49,7 +48,7 @@ bool ConcurrentQueue<T>::isEmpty()
 	return m_queue.empty();
 }
 
-template class ConcurrentQueue<Trade>;
+template class ConcurrentQueue<NewTrade>;
 template class ConcurrentQueue<MessageHeader*>;
 template class ConcurrentQueue<Order>;
 template class ConcurrentQueue<char*>;

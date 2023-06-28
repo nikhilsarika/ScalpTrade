@@ -11,7 +11,6 @@ private:
 	int new_socket;
 	int valread;
 	int tcpConnectionAlive;
-	char buffer[1024] = {0};
 	int opt;
 	int addrlen;
 public:

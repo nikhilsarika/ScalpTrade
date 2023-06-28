@@ -47,10 +47,10 @@ int SocketClient::startReceivingData() {
     }
     std::cout << "Before while in client " << '\n';
     while (tcpConnectionAlive) {
-        tcpConnectionAlive = read(client_fd, buffer, 1024);
-        char* charPointer = buffer;
+        char *charPointer;
+        tcpConnectionAlive = read(client_fd, charPointer, 1024);
+
         inputByteQueue->push(charPointer);
-        // std::cout << "Value pushed to the queue " << '\n';
     }
 
     return 0;

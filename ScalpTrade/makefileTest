@@ -1,9 +1,9 @@
 all: StartSocketServer
 
-StartSocketServer: ConcurrentQueue.o MessageHeader.o Order.o Quote.o Trade.o SocketServer.o StartSocketServer.o
-	g++ -std=c++14 ConcurrentQueue.o MessageHeader.o Order.o Quote.o Trade.o SocketServer.o IntegrationTest.o  -o StartSocketServer
+StartSocketServer: ConcurrentQueue.o MessageHeader.o Order.o Quote.o Trade.o SocketServer.o StartSocketServer.o NewTrade.o
+	g++ -std=c++14 ConcurrentQueue.o MessageHeader.o Order.o Quote.o Trade.o NewTrade.o SocketServer.o IntegrationTest.o  -o StartSocketServer
 
-ConcurrentQueue.o: ConcurrentQueue.cpp ConcurrentQueue.h Trade.h MessageHeader.h Order.h
+ConcurrentQueue.o: ConcurrentQueue.cpp ConcurrentQueue.h Trade.h MessageHeader.h Order.h NewTrade.h
 	g++ -std=c++14 -c ConcurrentQueue.cpp
 
 MessageHeader.o: MessageHeader.cpp MessageHeader.h
@@ -18,8 +18,11 @@ Quote.o: Quote.cpp Quote.h
 Trade.o: Trade.cpp Trade.h
 	g++ -std=c++14 -c Trade.cpp
 
+NewTrade.o: NewTrade.cpp NewTrade.h
+	g++ -std=c++14 -c NewTrade.cpp
+
 SocketServer.o: SocketServer.cpp SocketServer.h TestVariables.h
 	g++ -std=c++14 -c SocketServer.cpp
 
-StartSocketServer.o: IntegrationTest.cpp ConcurrentQueue.h Order.h MessageHeader.h Quote.h Trade.h SocketServer.h TestVariables.h
+StartSocketServer.o: IntegrationTest.cpp ConcurrentQueue.h Order.h MessageHeader.h Quote.h NewTrade.h Trade.h SocketServer.h TestVariables.h
 	g++ -std=c++14 -c IntegrationTest.cpp

@@ -13,6 +13,9 @@
 #include "global.h"
 #include "SocketClient.h"
 #include "SocketServer.h"
+#include "NewTrade.h"
+#include "NewQuote.h"
+
 
 
 using std::string;
@@ -31,13 +34,13 @@ std::atomic<long long int> vwap(0);
 std::atomic<bool> initialVwapCalculated(false);
 std::atomic<bool> triggerVwapUpdate(true);
 
-//Variable to temporarily hold the Quote and Trade Pointers
-Quote* newQuote = nullptr;
-Trade* newTrade = nullptr;
+
+//Trade* newTrade = new Trade();
 char* outputBytes = nullptr;
+NewTrade* newTrade = nullptr; 
 
 //Concurrent Queues defined to Consume Byte data from the Market Data TCP Streams.
-ConcurrentQueue<Trade> *tradeQueue = new ConcurrentQueue<Trade>();
+ConcurrentQueue<NewTrade>* tradeQueue = new ConcurrentQueue<NewTrade>();
 
 //Concurrent Queue defined to Push Byte data to the input market TCP Stream.
 ConcurrentQueue<char*> *inputByteQueue = new ConcurrentQueue<char*>();
@@ -50,8 +53,8 @@ ConcurrentQueue<char*> *outputByteQueue = new ConcurrentQueue<char*>();
 ConcurrentQueue<char*> *testQueue = new ConcurrentQueue<char*>();
 
 //Methods declared to implement the business logic of the Application
-void processQuote(Quote* newQuote, string const& orderSide, int const& maxQuantity);
-void processTrade(Trade* newTrade, int const& vwapWindow);
+void processQuote(NewQuote* newQuote, string const& orderSide, int const& maxQuantity);
+void processTrade(NewTrade* newTrade, int const& vwapWindow);
 void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price);
 void updateVwap(int const& vwapWindow);
 void intergrationTest(string tcpIp, string tcpPort);
@@ -80,33 +83,6 @@ int main(int argc, char* argv[]) {
 	cout << "orderTcpIP : " << orderTcpIP << '\n';
 	cout << "orderTcpPort : " << orderTcpPort << '\n';
 
-	// SocketServer* sockerServer = new SocketServer(marketTcpIP,marketTcpPort);
-
-	// //Test Data Generation to Stream to the 
-	// MessageHeader* header = new MessageHeader(9, 1);
-	// Quote* quote = new Quote(*header, "IBM", 1580152659000000000ULL, 5, 13897, 9, 13898);
-
-	// MessageHeader* header1 = new MessageHeader(9, 2);
-	// Trade* trade = new Trade(*header1, "IBM", 1580152659000000000ULL, 100, 13900);
-
-	// ConcurrentQueue <char*> *byteQueue = new ConcurrentQueue < char*>();
-	// //Implement Socket to receive Byte data;
-	// //processMessage(input, orderSide, vwapWindow, maxQuantity);
-	// //Below quoteBytes and Tradebytes are sent by the socket
-	// auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
-	// bool tempFlag = true;
-	// while (std::chrono::system_clock::now() < endofVWapWindow) {
-	// //while (tempFlag) {
-	// 	unsigned char* check = NULL;
-	// 	char* quotePointer = reinterpret_cast<char*>(quote);
-	// 	char* TradePointer = reinterpret_cast<char*>(trade);
-	// 	byteQueue->push(quotePointer);
-	// 	byteQueue->push(TradePointer);
-	// 	tempFlag = false;
-
-	// }
-
-	// intergrationTest(marketTcpIP, marketTcpPort);
 	
 	SocketClient* marketClient = new SocketClient(marketTcpIP,marketTcpPort);
 
@@ -121,28 +97,37 @@ int main(int argc, char* argv[]) {
 	//Messages are read from the messageQueue that contains the messages received from Sockets
 	// auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
 	// while (std::chrono::system_clock::now() < endofVWapWindow) {
+	std::cout << "Before while" << '\n';
 	while (true) {
-
 		// std::cout<< "Inside Infinite While loop : " << inputByteQueue->isEmpty() << '\n';
 	// while (!byteQueue->isEmpty()) {
 		if(!inputByteQueue->isEmpty()){
 			
 			char* currentByteStream = inputByteQueue->pop();
 			MessageHeader* currentHeader = reinterpret_cast<MessageHeader*>(currentByteStream);
+			//MessageHeader currentHeader = trade->header;
+			// std::cout<< "Order type from header: " << static_cast<int>(currentHeader->type)  << '\n';
+			// std::cout<< "Order leght from header: " << static_cast<int>(currentHeader->length)  << '\n';
+
+
 
 			//Messages are processed Based on the Message Header Type i.e. 1 for Quote, 2 for Trade and Exception for all other types
 			if (initialVwapCalculated && static_cast<int>(currentHeader->type) == 1) {
-				//std::cout<< "Inside the Quote of logic : " << inputByteQueue->isEmpty() << '\n';
-				newQuote = (Quote*)(&currentByteStream);
+				std::cout<< "Inside the Quote of logic : " << inputByteQueue->isEmpty() << '\n';
+				currentByteStream  = currentByteStream + sizeof(currentHeader);
+				NewQuote* newQuote = reinterpret_cast<NewQuote*>(currentByteStream);
 				processQuote(newQuote, orderSide, maxOrderSize);
 			}
 			else if (static_cast<int>(currentHeader->type) == 2){
 				//std::cout<< "Inside the Trade of logic : " << inputByteQueue->isEmpty() << '\n';
-				newTrade = (Trade*)(&currentByteStream);
+				currentByteStream = currentByteStream + sizeof(currentHeader);
+				NewTrade* newTrade = reinterpret_cast<NewTrade*>(currentByteStream);
+				cout<< "Before Process Trade" << '\n';
 				processTrade(newTrade, vwapWindow);
+				cout<< "After Process Trade" << '\n';
 			}
 			else {
-				//std::cout<< "Inside the else of logic : " << inputByteQueue->isEmpty() << '\n';
+				std::cout<< "Inside the else of logic : " << inputByteQueue->isEmpty() << '\n';
 				//Throw Exception as Invalid Message Type is received. 
 			}
 		
@@ -155,12 +140,12 @@ int main(int argc, char* argv[]) {
 
 
 //Quote messages are processed based on the order side and Vwap Price
-void processQuote(Quote* newQuote, string const& orderSide, int const& maxQuantity) {
-	std::cout<< "Bid Price : " << static_cast<int>(newQuote->bidPrice) << '\n';
-	std::cout<< "Calculated Vwap: " << vwap<< '\n';
-	std::cout<< "Order Side: " << orderSide << '\n';
-	std::cout<< "Condition 1 : " << (orderSide == "B" && static_cast<int>(newQuote->bidPrice) < vwap)  << '\n';
-	std::cout<< "Condition 2 : " << (orderSide == "S" && static_cast<int>(newQuote->askPrice) > vwap) << '\n';
+void processQuote(NewQuote* newQuote, string const& orderSide, int const& maxQuantity) {
+	// std::cout<< "Bid Price : " << static_cast<int>(newQuote->bidPrice) << '\n';
+	// std::cout<< "Calculated Vwap: " << vwap<< '\n';
+	// std::cout<< "Order Side: " << orderSide << '\n';
+	// std::cout<< "Condition 1 : " << (orderSide == "B" && static_cast<int>(newQuote->bidPrice) < vwap)  << '\n';
+	// std::cout<< "Condition 2 : " << (orderSide == "S" && static_cast<int>(newQuote->askPrice) > vwap) << '\n';
 	if (orderSide == "B" && static_cast<int>(newQuote->bidPrice) < vwap) {
 		placeNewOrder(newQuote->symbol, 'B', max(maxQuantity, static_cast<int>(newQuote->bidQuantity)), newQuote->bidPrice);
 	}
@@ -174,9 +159,9 @@ void processQuote(Quote* newQuote, string const& orderSide, int const& maxQuanti
 }
 
 //Trade messages are Pushed onto a Queue and Asychronously processed to calculate Vwap based on the vwapWindow, Trade Price and Trade Quantity
-void processTrade(Trade* newTrade,int const& vwapWindow) {
+void processTrade(NewTrade* trade,int const& vwapWindow) {
 
-	tradeQueue->push(*newTrade);
+	tradeQueue->push(*trade);
 	if (triggerVwapUpdate) {
 		//vwap is updated in the background as the trade messages are pushed on the Trade Queue. 
 		thread vwapThread(updateVwap, vwapWindow);
@@ -187,9 +172,12 @@ void processTrade(Trade* newTrade,int const& vwapWindow) {
 
 //Method to calculate Vwap value based on the received input Trade messages
 void updateVwap(int const& vwapWindow) {
-	
+	// std::cout<< "Inside update vwap : " << vwapWindow << '\n';
+	// std::cout<< "Inside update initialVwapCalculated : " << initialVwapCalculated << '\n';
+	// std::cout<< "Inside update triggerVwapUpdate : " << triggerVwapUpdate << '\n';
 	//Caluate Time window based on the input
-	Trade trade;
+	NewTrade trade;
+	//std::cout<< "Before DO WHile " << triggerVwapUpdate << '\n';
 	auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(vwapWindow);
 
 	//Code to calcualate vwap needs to be triggered atleast one time based on the given requirements
@@ -197,15 +185,18 @@ void updateVwap(int const& vwapWindow) {
 	do {
 		if (!tradeQueue->isEmpty()) {
 			trade = tradeQueue->pop();
+			// std::cout<< "Inside trade.price : " << trade.price << '\n';
+			// std::cout<< "Inside utrade.quantity: " << trade.quantity << '\n';
 			vwap_numerator = vwap_numerator + (trade.price * trade.quantity);
 			vwap_denominator = vwap_denominator + trade.quantity;
 		}
 	} while (std::chrono::system_clock::now() < endofVWapWindow);
 	
-
 	//No zero check for denominator as its assumed that trade quantity would not be zero.
 	vwap = vwap_numerator / vwap_denominator;
 
+	std::cout<< "Calculated VWAP: " << vwap << '\n';
+	
 
 	//Set the values to facilitate the next vwap calculation
 	initialVwapCalculated = true;
@@ -227,44 +218,3 @@ void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price) {
 
 }
 
-
-void intergrationTest(string tcpIp, string tcpPort){
-
-	//Test Data Generation to Stream to the 
-	MessageHeader* header = new MessageHeader(9, 1);
-	Quote* quote = new Quote(*header, "IBM", 1580152659000000000ULL, 5, 13897, 9, 13898);
-
-	MessageHeader* header1 = new MessageHeader(9, 2);
-	Trade* trade = new Trade(*header1, "IBM", 1580152659000000000ULL, 100, 13900);
-
-	auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
-	bool tempFlag = true;
-	while (std::chrono::system_clock::now() < endofVWapWindow) {
-	//while (tempFlag) {
-		unsigned char* check = NULL;
-		char* quotePointer = reinterpret_cast<char*>(quote);
-		char* TradePointer = reinterpret_cast<char*>(trade);
-		testQueue->push(quotePointer);
-		testQueue->push(TradePointer);
-		tempFlag = false;
-
-	}
-
-	// 	int count = 30;
-	// while (count >0) {
-	// //while (tempFlag) {
-	// 	unsigned char* check = NULL;
-	// 	char* quotePointer = reinterpret_cast<char*>(quote);
-	// 	char* TradePointer = reinterpret_cast<char*>(trade);
-	// 	testQueue->push(quotePointer);
-	// 	testQueue->push(TradePointer);
-	// 	count--;
-
-	// }
-
-	SocketServer* sockerServer = new SocketServer(tcpIp, tcpPort);
-
-	thread socketServerThread(&SocketServer::sendMessages,sockerServer);
-	socketServerThread.detach();
-
-}

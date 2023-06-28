@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include "TestVariables.h"
+#include "Trade.h"
 
 
 
@@ -49,10 +50,7 @@ int SocketServer::sendMessages() {
         exit(EXIT_FAILURE);
     }
     address.sin_family = AF_INET;
-    // address.sin_addr.s_addr = INADDR_ANY;
     address.sin_addr.s_addr = htonl(INADDR_ANY);
-    // inet_pton(AF_INET, tcpIp.c_str(), &address.sin_addr.s_addr);
-    // address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(std::stoul(tcpPort));
 
 
@@ -79,38 +77,11 @@ int SocketServer::sendMessages() {
     }
 
     std::cout << "before ifinite while: " << '\n';
-    while (true) {
+    while (tcpConnectionAlive) {
         if(!testQueue->isEmpty()){
-            std::cout<< "Inside TCP Server Queue" << '\n';
-            strcpy(buffer, testQueue->pop());
-            tcpConnectionAlive = send(new_socket, buffer, 1024, 0);
+            tcpConnectionAlive = send(new_socket, testQueue->pop(), 1024, 0);
         }
-    }
-
-// std::cout << "before ifinite while: " << '\n';
-// for ( ; ; ) {
-//     socklen_t clilen;
-//     int n;
-//     clilen = sizeof(address);
-//     new_socket = accept (server_fd, (struct sockaddr *) &address, &clilen);
-//     printf("%s\n","Received request...");
-
-//     while ( (n = recv(new_socket, buffer, 1024,0)) > 0)  {
-//     printf("%s","String received from and resent to the client:");
-//         if(!testQueue->isEmpty()){
-//             std::cout<< "Inside TCP Server Queue" << '\n';
-//             strcpy(buffer, testQueue->pop());
-//             tcpConnectionAlive = send(new_socket, buffer, 1024, 0);
-//         }
-//     }
-
-//     if (n < 0) {
-//     perror("Read error");
-//     exit(1);
-//     }
-//     close(new_socket);
-
-//  }   
+    }  
     return 0;
 
 };

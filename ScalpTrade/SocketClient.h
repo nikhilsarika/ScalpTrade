@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "Quote.h"
 
 class SocketClient
 {
