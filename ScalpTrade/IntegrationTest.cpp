@@ -44,19 +44,25 @@ void intergrationTestSendData(string tcpIp, string tcpPort){
 
 	auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
 	while (std::chrono::system_clock::now() < endofVWapWindow) {
-		//char* quotePointer = reinterpret_cast<char*>(quote);
+		char* quotePointer = reinterpret_cast<char*>(quote);
 		char* tradePointer = reinterpret_cast<char*>(trade);
-		//testQueue->push(quotePointer);
+		testQueue->push(quotePointer);
 		testQueue->push(tradePointer);
 
 	}
 
-	endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
-	while (std::chrono::system_clock::now() < endofVWapWindow) {
-		char* quotePointer = reinterpret_cast<char*>(quote);
-		testQueue->push(quotePointer);
-	}
+	// endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
+	// while (std::chrono::system_clock::now() < endofVWapWindow) {
+	// 	char* quotePointer = reinterpret_cast<char*>(quote);
+	// 	testQueue->push(quotePointer);
+	// }
 
+	// int count = 3;
+	// while (count>0) {
+	// 	char* quotePointer = reinterpret_cast<char*>(trade);
+	// 	testQueue->push(quotePointer);
+	// 	count--;
+	// }
 
 	std::cout << "Before Socket Object Creation: " << '\n';
 	SocketServer* socketServer = new SocketServer(tcpIp, tcpPort);
