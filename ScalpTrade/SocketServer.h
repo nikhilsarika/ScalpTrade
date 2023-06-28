@@ -17,4 +17,5 @@ public:
 	SocketServer(std::string tcpIp, std::string tcpPort);
 	~SocketServer();
 	int sendMessages();
+	int receiveMessages();
 };

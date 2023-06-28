@@ -37,10 +37,10 @@ std::atomic<bool> triggerVwapUpdate(true);
 
 //Trade* newTrade = new Trade();
 char* outputBytes = nullptr;
-NewTrade* newTrade = nullptr; 
+Trade* newTrade = nullptr; 
 
 //Concurrent Queues defined to Consume Byte data from the Market Data TCP Streams.
-ConcurrentQueue<NewTrade>* tradeQueue = new ConcurrentQueue<NewTrade>();
+ConcurrentQueue<Trade>* tradeQueue = new ConcurrentQueue<Trade>();
 
 //Concurrent Queue defined to Push Byte data to the input market TCP Stream.
 ConcurrentQueue<char*> *inputByteQueue = new ConcurrentQueue<char*>();
@@ -54,7 +54,7 @@ ConcurrentQueue<char*> *testQueue = new ConcurrentQueue<char*>();
 
 //Methods declared to implement the business logic of the Application
 void processQuote(NewQuote* newQuote, string const& orderSide, int const& maxQuantity);
-void processTrade(NewTrade* newTrade, int const& vwapWindow);
+void processTrade(Trade* newTrade, int const& vwapWindow);
 void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price);
 void updateVwap(int const& vwapWindow);
 void intergrationTest(string tcpIp, string tcpPort);
@@ -89,10 +89,10 @@ int main(int argc, char* argv[]) {
 	thread marketCleintThread(&SocketClient::startReceivingData,marketClient);
 	marketCleintThread.detach();
 
-	// SocketClient* orderClient = new SocketClient(orderTcpIP,orderTcpPort);
+	SocketClient* orderClient = new SocketClient(orderTcpIP,orderTcpPort);
 
-	// thread orderClientThread(&SocketClient::startReceivingData,orderClient);
-	// orderClientThread.detach();
+	thread orderClientThread(&SocketClient::startReceivingData,orderClient);
+	orderClientThread.detach();
 
 	//Messages are read from the messageQueue that contains the messages received from Sockets
 	// auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
@@ -106,8 +106,8 @@ int main(int argc, char* argv[]) {
 			char* currentByteStream = inputByteQueue->pop();
 			MessageHeader* currentHeader = reinterpret_cast<MessageHeader*>(currentByteStream);
 			//MessageHeader currentHeader = trade->header;
-			// std::cout<< "Order type from header: " << static_cast<int>(currentHeader->type)  << '\n';
-			// std::cout<< "Order leght from header: " << static_cast<int>(currentHeader->length)  << '\n';
+			std::cout<< "Order type from header: " << static_cast<int>(currentHeader->type)  << '\n';
+			std::cout<< "Order leght from header: " << static_cast<int>(currentHeader->length)  << '\n';
 
 
 
@@ -121,9 +121,10 @@ int main(int argc, char* argv[]) {
 			else if (static_cast<int>(currentHeader->type) == 2){
 				//std::cout<< "Inside the Trade of logic : " << inputByteQueue->isEmpty() << '\n';
 				currentByteStream = currentByteStream + sizeof(currentHeader);
-				NewTrade* newTrade = reinterpret_cast<NewTrade*>(currentByteStream);
+				NewTrade* currTrade = reinterpret_cast<NewTrade*>(currentByteStream);
 				cout<< "Before Process Trade" << '\n';
-				processTrade(newTrade, vwapWindow);
+				Trade*  trade = new Trade(*currentHeader,currTrade->symbol, currTrade->timestamp,currTrade->quantity,currTrade->price);
+				processTrade(trade, vwapWindow);
 				cout<< "After Process Trade" << '\n';
 			}
 			else {
@@ -159,9 +160,9 @@ void processQuote(NewQuote* newQuote, string const& orderSide, int const& maxQua
 }
 
 //Trade messages are Pushed onto a Queue and Asychronously processed to calculate Vwap based on the vwapWindow, Trade Price and Trade Quantity
-void processTrade(NewTrade* trade,int const& vwapWindow) {
+void processTrade(Trade* newTrade,int const& vwapWindow) {
 
-	tradeQueue->push(*trade);
+	tradeQueue->push(*newTrade);
 	if (triggerVwapUpdate) {
 		//vwap is updated in the background as the trade messages are pushed on the Trade Queue. 
 		thread vwapThread(updateVwap, vwapWindow);
@@ -176,7 +177,7 @@ void updateVwap(int const& vwapWindow) {
 	// std::cout<< "Inside update initialVwapCalculated : " << initialVwapCalculated << '\n';
 	// std::cout<< "Inside update triggerVwapUpdate : " << triggerVwapUpdate << '\n';
 	//Caluate Time window based on the input
-	NewTrade trade;
+	Trade trade;
 	//std::cout<< "Before DO WHile " << triggerVwapUpdate << '\n';
 	auto endofVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(vwapWindow);
 
