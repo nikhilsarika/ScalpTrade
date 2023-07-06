@@ -85,7 +85,7 @@ int SocketClient::startSendingData() {
         printf("\nConnection Failed \n");
         return -1;
     }
-    while (tcpConnectionAlive < 0) {
+    while (!(tcpConnectionAlive < 0)) {
         if (!outputByteQueue->isEmpty()) {
             strcpy(buffer, outputByteQueue->pop());
             tcpConnectionAlive = send(client_fd, buffer, 1024, 0);

@@ -36,34 +36,36 @@ std::atomic<bool> triggerVwapUpdate(true);
 
 //Trade* newTrade = new Trade();
 char* outputBytes = nullptr;
-Trade* newTrade = nullptr; 
+Trade* newTrade = nullptr;
 
 //Concurrent Queue defined to Asynchronously process trade data to update the vwap value
 ConcurrentQueue<Trade>* tradeQueue = new ConcurrentQueue<Trade>();
 
 //Concurrent Queue defined to Push Byte data to the input market TCP Stream.
-ConcurrentQueue<char*> *inputByteQueue = new ConcurrentQueue<char*>();
+ConcurrentQueue<char*>* inputByteQueue = new ConcurrentQueue<char*>();
 
 //Concurrent Queue defined to Push Byte data to the Output Order TCP Stream.
-ConcurrentQueue<char*> *outputByteQueue = new ConcurrentQueue<char*>();
+ConcurrentQueue<char*>* outputByteQueue = new ConcurrentQueue<char*>();
 
 
 //Concurrent Queue defined to Push Byte data to create random input values
-ConcurrentQueue<char*> *testQueue = new ConcurrentQueue<char*>();
+ConcurrentQueue<char*>* testQueue = new ConcurrentQueue<char*>();
 
 //Methods declared to implement the business logic of the Application
 void processQuote(NewQuote* newQuote, string const& orderSide, int const& maxQuantity);
 void processTrade(Trade* newTrade, int const& vwapWindow);
 void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price);
 void updateVwap(int const& vwapWindow);
+void mockStartMarketSocket();
+void mockStartOrderSocket();
 
 
 //Driver Function to read Start the Application and Read Command Line Inputs
 int main(int argc, char* argv[]) {
-	
+
 
 	//Variables Defined to Store the Command Line inputs
-	const string symbol= argv[1];
+	const string symbol = argv[1];
 	const string orderSide = argv[2];
 	const int maxOrderSize = atoi(argv[3]);
 	const int vwapWindow = atoi(argv[4]);
@@ -83,34 +85,32 @@ int main(int argc, char* argv[]) {
 
 	//Create a Socket to receive market data.
 	//The Socket is created and detached to proceed with rest of the business logic
-	SocketClient* marketClient = new SocketClient(marketTcpIP,marketTcpPort);
-	thread marketCleintThread(&SocketClient::startReceivingData,marketClient);
-	marketCleintThread.detach();
+	thread marketClientThread(mockStartMarketSocket);
+	marketClientThread.detach();
 
 	//Create a Socket to send processed orders.
 	//The Socket is created and detached to proceed with rest of the business logic
-	SocketClient* orderClient = new SocketClient(orderTcpIP,orderTcpPort);
-	thread orderClientThread(&SocketClient::startSendingData,orderClient);
+	thread orderClientThread(mockStartOrderSocket);
 	orderClientThread.detach();
 
 	//Messages are read from the messageQueue that contains the messages received from Sockets
 	//The infinite loops keeps the process running and waits for the input stream to be populated by the TCP Socket for Market Data
 	while (true) {
-		if(!inputByteQueue->isEmpty()){
-			
+		if (!inputByteQueue->isEmpty()) {
+
 			char* currentByteStream = inputByteQueue->pop();
 			MessageHeader* currentHeader = reinterpret_cast<MessageHeader*>(currentByteStream);
 
 			//Messages are processed Based on the Message Header Type i.e. 1 for Quote, 2 for Trade and Exception for all other types
 			if (initialVwapCalculated && static_cast<int>(currentHeader->type) == 1) {
-				currentByteStream  = currentByteStream + sizeof(currentHeader);
+				currentByteStream = currentByteStream + sizeof(currentHeader);
 				NewQuote* newQuote = reinterpret_cast<NewQuote*>(currentByteStream);
 				processQuote(newQuote, orderSide, maxOrderSize);
 			}
-			else if (static_cast<int>(currentHeader->type) == 2){
+			else if (static_cast<int>(currentHeader->type) == 2) {
 				currentByteStream = currentByteStream + sizeof(currentHeader);
 				NewTrade* currTrade = reinterpret_cast<NewTrade*>(currentByteStream);
-				Trade*  trade = new Trade(*currentHeader,currTrade->symbol, currTrade->timestamp,currTrade->quantity,currTrade->price);
+				Trade* trade = new Trade(*currentHeader, currTrade->symbol, currTrade->timestamp, currTrade->quantity, currTrade->price);
 				processTrade(trade, vwapWindow);
 			}
 			else {
@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 	}
-	   
+
 	return 0;
 }
 
@@ -137,7 +137,7 @@ void processQuote(NewQuote* newQuote, string const& orderSide, int const& maxQua
 }
 
 //Trade messages are Pushed onto a Queue and Asychronously processed to calculate Vwap based on the vwapWindow, Trade Price and Trade Quantity
-void processTrade(Trade* newTrade,int const& vwapWindow) {
+void processTrade(Trade* newTrade, int const& vwapWindow) {
 
 	tradeQueue->push(*newTrade);
 	if (triggerVwapUpdate) {
@@ -163,12 +163,12 @@ void updateVwap(int const& vwapWindow) {
 			vwap_denominator = vwap_denominator + trade.quantity;
 		}
 	} while (std::chrono::system_clock::now() < endofVWapWindow);
-	
+
 	//No zero check for denominator as its assumed that trade quantity would not be zero.
 	vwap = vwap_numerator / vwap_denominator;
 
-	std::cout<< "Calculated VWAP: " << vwap << '\n';
-	
+	std::cout << "Calculated VWAP: " << vwap << '\n';
+
 
 	//Set the values to facilitate the next vwap calculation
 	initialVwapCalculated = true;
@@ -184,9 +184,37 @@ void placeNewOrder(string symbol, char side, uint32_t quantity, int32_t price) {
 	cout << "Placing a new order" << '\n';
 	uint64_t timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	Order* newOrder = new Order(symbol, timestamp, side, quantity, price);
-	
+
 	outputBytes = reinterpret_cast<char*>(newOrder);
 	outputByteQueue->push(outputBytes);
 
+}
+
+
+void mockStartMarketSocket() {
+	MessageHeader* header = new MessageHeader(9, 1);
+	Quote* quote = new Quote(*header, "IBM", 1580152659000000000ULL, 5, 13897, 9, 13898);
+
+	MessageHeader* header1 = new MessageHeader(9, 2);
+	Trade* trade = new Trade(*header1, "IBM", 1580152659000000000ULL, 100, 13900);
+
+	auto endOfVWapWindow = std::chrono::system_clock::now() + std::chrono::seconds(3);
+	while (std::chrono::system_clock::now() < endOfVWapWindow) {
+		char* quotePointer = reinterpret_cast<char*>(quote);
+		char* tradePointer = reinterpret_cast<char*>(trade);
+		testQueue->push(quotePointer);
+		testQueue->push(tradePointer);
+
+	}
+}
+
+
+void mockStartOrderSocket() {
+	while (true) {
+		if (!outputByteQueue->isEmpty()) {
+			Order* order = reinterpret_cast<Order*>(outputByteQueue->pop());
+			cout << "New order Place for " << order->symbol << "at : " << order->timestamp << '\n';
+		}
+	}
 }
 

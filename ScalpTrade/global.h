@@ -2,7 +2,6 @@
 #include <string>
 #include <cstdint>
 #include "ConcurrentQueue.h"
-#include "ConcurrentQueue.h"
 #include <atomic>
 
 
